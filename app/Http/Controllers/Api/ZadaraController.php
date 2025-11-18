@@ -9,21 +9,37 @@ use Illuminate\Support\Facades\Storage;
 class ZadaraController extends Controller
 {
     /** Lista tudo dentro de FIDC_AKRK/ */
-    public function lista()
+    public function lista(Request $request)
     {
-        $prefix = env('ZADARA_PREFIX', 'FIDC_AKRK') . '/';
-        $disk   = Storage::disk('zadara');
+        try {
+            // Autenticação fake (sem banco) - apenas para teste
+            if ($request->bearerToken() !== 'fake-token-123') {
+                return response()->json(['message' => 'Token inválido'], 401);
+            }
 
-        $all = collect($disk->listContents($prefix, true))
-                 ->where('type', 'file')
-                 ->map(fn($item) => [
-                     'path'      => $item['path'],
-                     'size'      => $item['size'] ?? 0,
-                     'timestamp' => $item['timestamp'] ?? null,
-                     'url'       => $disk->temporaryUrl($item['path'], now()->addMinutes(15)),
-                 ]);
+            $prefix = env('ZADARA_PREFIX', 'FIDC_AKRK') . '/';
+            $disk   = Storage::disk('zadara');
 
-        return response()->json($all);
+            $all = collect($disk->listContents($prefix, true))
+                ->where('type', 'file')
+                ->map(fn($item) => [
+                    'path'      => $item['path'],
+                    'size'      => $item['size'] ?? 0,
+                    'timestamp' => $item['timestamp'] ?? null,
+                    'url'       => $disk->temporaryUrl($item['path'], now()->addMinutes(15)),
+                ]);
+
+            return response()->json($all);
+
+        } catch (\Throwable $e) {
+            // Devolve o erro na tela / Postman
+            return response()->json([
+                'erro' => $e->getMessage(),
+                'arquivo' => $e->getFile(),
+                'linha' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ], 500);
+        }
     }
 
     /** Gera URL temporária para download */
