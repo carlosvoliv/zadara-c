@@ -59,6 +59,16 @@ return [
             'throw' => false,
             'report' => false,
         ],
+        'zadara' => [
+        'driver' => 's3',
+        'key' => env('ZADARA_ACCESS_KEY'),
+        'secret' => env('ZADARA_SECRET_KEY'),
+        'region' => env('ZADARA_REGION', 'us-east-1'),
+        'bucket' => env('ZADARA_BUCKET'),
+        'endpoint' => env('ZADARA_ENDPOINT'),
+        'use_path_style_endpoint' => env('ZADARA_USE_PATH_STYLE', true),
+        'throw' => false,
+    ],
 
     ],
 
