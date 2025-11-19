@@ -6,7 +6,10 @@ use App\Http\Controllers\Api\ZadaraController;
 Route::get('/', function () {
     return view('welcome');
 });
+
 Route::view('upload-zip', 'upload-zip');
+
+// Rotas Zadara (sem CSRF)
 Route::post('api/zadara/upload-zip', [ZadaraController::class, 'uploadZip']);
 Route::get('api/zadara/lista', [ZadaraController::class, 'lista']);
 Route::get('api/zadara/download/{path}', [ZadaraController::class, 'download'])

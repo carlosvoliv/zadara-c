@@ -51,4 +51,23 @@ class ZadaraController extends Controller
         }
         return response()->json(['url' => $disk->temporaryUrl($path, now()->addMinutes(15))]);
     }
+
+    public function uploadZip(Request $request)
+    {
+        try {
+            $request->validate(['zip' => 'required|file|mimes:zip|max:100000']); // 100 MB
+
+            $zipPath = $request->file('zip')->getRealPath();
+            $handler = new \App\Services\ZipHandler($zipPath);
+
+            $handler->extract();               // memória
+            $handler->validateNames();         // regex 11 dígitos
+            $files   = $handler->uploadToZadara(auth()->user()); // sobe + retorna metas
+
+            return response()->json(['ok' => true, 'files' => $files]);
+
+        } catch (\Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
 }
