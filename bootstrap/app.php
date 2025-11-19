@@ -11,8 +11,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
-    })
+    $middleware->web(append: [
+        \App\Http\Middleware\VerifyCsrfToken::class,
+    ]);
+
+    // Desativa CSRF para essas rotas
+    $middleware->validateCsrfTokens(except: [
+        'api/zadara/upload-zip',
+        'api/zadara/*',
+    ]);
+})
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();

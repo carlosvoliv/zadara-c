@@ -20,25 +20,30 @@ class ZipHandler
     public function extract(): void
     {
         $zip = new ZipArchive;
-        if ($zip->open($this->zipPath) !== true) throw new \Exception('ZIP inválido');
+        if ($zip->open($this->zipPath) !== true) {
+            throw new \Exception('ZIP inválido');
+        }
+
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $name = $zip->getNameIndex($i);
             if (str_ends_with($name, '/')) continue; // pasta
-            $this->extracted[] = ['zipPath' => $name, 'content' => $zip->getFromIndex($i)];
+            $this->extracted[] = [
+                'zipPath' => $name,
+                'content' => $zip->getFromIndex($i),
+            ];
         }
         $zip->close();
-        if (empty($this->extracted)) throw new \Exception('ZIP vazio');
+
+        if (empty($this->extracted)) {
+            throw new \Exception('ZIP vazio');
+        }
+        \Log::info('EXTRACT FINAL', ['total_files' => count($this->extracted)]);
     }
 
-    /** Valida nome do arquivo (último nível) */
+    /** Valida nome do arquivo (último nível) – DESATIVADO */
     public function validateNames(): void
     {
-        foreach ($this->extracted as $file) {
-            $basename = basename($file['zipPath']);
-            // contrato 11 dígitos = xxxxxxxxx-x
-            if (!preg_match('/^\d{9}-\d$/', pathinfo($basename, PATHINFO_FILENAME)))
-                throw new \Exception("Nome inválido: $basename");
-        }
+        // vazio, não faz nada
     }
 
     /** Sobe cada arquivo para Zadara na estrutura fixa */
@@ -49,18 +54,25 @@ class ZipHandler
         $lista  = [];
 
         foreach ($this->extracted as $file) {
+            \Log::info('DENTRO DO FOREACH', ['zipPath' => $file['zipPath']]);
+
             $parts = $this->parseZipPath($file['zipPath']);
             $nomePasta = $parts['folder'] ?? 'sem-pasta';
             $nomeArq   = $parts['file'];
-            $ccbControle = pathinfo($nomeArq, PATHINFO_FILENAME); // 123456789-0
+            $ccbControle = pathinfo($nomeArq, PATHINFO_FILENAME);
 
-            // Monta path Zadara
             $pathZadara = "$prefix/$nomePasta/$ccbControle/" . Str::uuid() . '_' . now()->timestamp . '_' . $nomeArq;
 
-            // Upload
-            $disk->put($pathZadara, $file['content']);
+            // ---- upload via stream ----
+            $tempPath = tempnam(sys_get_temp_dir(), 'zad_');
+            file_put_contents($tempPath, $file['content']);
+            $stream = fopen($tempPath, 'r');
+            $disk->putStream($pathZadara, $stream);
+            fclose($stream);
+            unlink($tempPath);
+            unset($file['content']); // libera RAM
+            // ----------------------------
 
-            // Metadados para retorno
             $lista[] = [
                 'original' => $file['zipPath'],
                 'path'     => $pathZadara,

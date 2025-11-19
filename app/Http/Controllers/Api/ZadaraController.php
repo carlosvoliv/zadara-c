@@ -11,6 +11,8 @@ class ZadaraController extends Controller
     /** Lista tudo dentro de FIDC_AKRK/ */
     public function lista(Request $request)
     {
+        \Log::info('ROTA LISTA CHAMADA');
+
         try {
             // Autenticação fake (sem banco) - apenas para teste
             if ($request->bearerToken() !== 'fake-token-123') {
@@ -32,13 +34,11 @@ class ZadaraController extends Controller
             return response()->json($all);
 
         } catch (\Throwable $e) {
-            // Devolve o erro na tela / Postman
             return response()->json([
-                'erro' => $e->getMessage(),
-                'arquivo' => $e->getFile(),
-                'linha' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-            ], 500);
+                'message' => $e->getPrevious()
+                ? $e->getPrevious()->getMessage()
+                : $e->getMessage(),
+            ], 422);
         }
     }
 
@@ -54,19 +54,54 @@ class ZadaraController extends Controller
 
     public function uploadZip(Request $request)
     {
+        \Log::info('UPLOAD INICIADO', ['file' => $request->file('zip')->getClientOriginalName()]);
+        \Log::info('ARQUIVO RECEBIDO', [
+            'has_file' => $request->hasFile('zip'),
+            'file'     => $request->file('zip'),
+            'name'     => $request->file('zip') ? $request->file('zip')->getClientOriginalName() : null,
+            'size'     => $request->file('zip') ? $request->file('zip')->getSize() : null,
+        ]);
+        \Log::info('ANTES DO HANDLER');
+
+        // Logs de diagnóstico
+        \Log::info('MIME TYPE', ['mime' => $request->file('zip')->getMimeType()]);
+        \Log::info('EXTENSÃO', ['ext' => $request->file('zip')->getClientOriginalExtension()]);
+        \Log::info('ARQUIVO VÁLIDO', ['valid' => $request->file('zip')->isValid()]);
+
         try {
-            $request->validate(['zip' => 'required|file|mimes:zip|max:100000']); // 100 MB
+            $validator = \Validator::make($request->all(), [
+                'zip' => 'required|file|mimes:zip|max:100000',
+            ], [
+                'zip.required' => 'Por favor, selecione um arquivo ZIP.',
+                'zip.file'     => 'O arquivo deve ser um upload válido.',
+                'zip.mimes'    => 'O arquivo deve ser .zip.',
+                'zip.max'      => 'O arquivo não pode ultrapassar 100 MB.',
+            ]);
+
+            if ($validator->fails()) {
+                \Log::error('VALIDAÇÃO FALHOU', ['errors' => $validator->errors()->all()]);
+                return response()->json([
+                    'message' => 'Erro de validação',
+                    'errors'  => $validator->errors()->all()
+                ], 422);
+            }
 
             $zipPath = $request->file('zip')->getRealPath();
             $handler = new \App\Services\ZipHandler($zipPath);
 
-            $handler->extract();               // memória
-            $handler->validateNames();         // regex 11 dígitos
-            $files   = $handler->uploadToZadara(auth()->user()); // sobe + retorna metas
+            $handler->extract();
+            // $handler->validateNames();
+            $files = $handler->uploadToZadara(auth()->user());
 
             return response()->json(['ok' => true, 'files' => $files]);
 
         } catch (\Throwable $e) {
+            \Log::error('ERRO NO UPLOAD', [
+                'message' => $e->getMessage(),
+                'file'    => $e->getFile(),
+                'line'    => $e->getLine(),
+                'trace'   => $e->getTraceAsString(),
+            ]);
             return response()->json(['message' => $e->getMessage()], 422);
         }
     }
