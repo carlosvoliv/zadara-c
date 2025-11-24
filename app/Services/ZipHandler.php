@@ -63,14 +63,16 @@ class ZipHandler
 
             $pathZadara = "$prefix/$nomePasta/$ccbControle/" . Str::uuid() . '_' . now()->timestamp . '_' . $nomeArq;
 
-            // ---- upload via stream ----
+            // Upload com stream (sem carregar tudo na RAM)
+            // ---- upload Flysystem-3 / S3-compatible ----
             $tempPath = tempnam(sys_get_temp_dir(), 'zad_');
             file_put_contents($tempPath, $file['content']);
             $stream = fopen($tempPath, 'r');
-            $disk->putStream($pathZadara, $stream);
+            $disk->put($pathZadara, $stream);   // <<<<< sem "Stream" no nome
             fclose($stream);
             unlink($tempPath);
-            unset($file['content']); // libera RAM
+            unset($file['content']);
+            // ------------------------------------------
             // ----------------------------
 
             $lista[] = [

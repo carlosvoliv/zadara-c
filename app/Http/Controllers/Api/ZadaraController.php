@@ -93,7 +93,9 @@ class ZadaraController extends Controller
             // $handler->validateNames();
             $files = $handler->uploadToZadara(auth()->user());
 
-            return response()->json(['ok' => true, 'files' => $files]);
+            return $request->expectsJson()
+                ? response()->json(['ok' => true, 'files' => $files])
+                : view('partials.upload-result', ['files' => $files]);
 
         } catch (\Throwable $e) {
             \Log::error('ERRO NO UPLOAD', [

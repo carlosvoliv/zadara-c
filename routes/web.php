@@ -8,6 +8,7 @@ Route::get('/', function () {
 });
 
 Route::view('upload-zip', 'upload-zip');
+Route::view('/zadara/upload', 'zadara-upload');
 
 // Rotas Zadara (sem CSRF)
 Route::post('api/zadara/upload-zip', [ZadaraController::class, 'uploadZip']);
