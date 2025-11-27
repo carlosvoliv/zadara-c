@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 // adicionar outro comentário aqui pra aparecer no git
+// vou colocar outro aqui só pra ver o que acontecere
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 
