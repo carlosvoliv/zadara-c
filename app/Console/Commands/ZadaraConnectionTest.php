@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Console\Commands;
-
+// adicionar outro comentário aqui pra aparecer no git
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 
